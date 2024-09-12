@@ -211,14 +211,6 @@ class DomainController extends Controller
 			]);
 		}
 
-		if (!$response->responseMsg->statusCode == 200) {
-			return response()->json([
-				'status' => false,
-				'message' => $response->responseText,
-				'data' => $response
-			]);
-		}
-
 		$stripe = new \Stripe\StripeClient(env("STRIPE"));
 		$domain_price_info = $stripe->prices->retrieve($price_info->price_id, []);
 
@@ -226,6 +218,19 @@ class DomainController extends Controller
 			$discount_info = $stripe->coupons->retrieve($price_info->discount_id, []);
 		} else {
 			$discount_info = false;
+		}
+
+		if ($response->responseMsg->statusCode != 200) { // the domain is not available for registration
+			return response()->json([
+				'status' => false,
+				'message' => $response->responseMsg->message,
+				'data' => [
+					'status_code' => $response->responseMsg->statusCode,
+					'name' => $request->domain_name,
+					'currency' => $domain_price_info->currency,
+					'message' => $response->responseMsg->message
+				]
+			]);
 		}
 
 		$domain_data = [
@@ -324,8 +329,6 @@ class DomainController extends Controller
 		$suggestions = curl_exec($curl);
 
 		curl_close($curl);
-
-		// $suggestions = json_decode($suggestions);
 
 		return response()->json([
 			'status' => true,
@@ -888,6 +891,91 @@ class DomainController extends Controller
 			'status' => true,
 			'message' => 'Theft protection for the domain is updated.',
 			'data' => []
+		]);
+	}
+
+	public function multi_year_price(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'website_name' => ['required', 'string'],
+			'region' => ['required', 'string']
+		], [], [
+			'website_name' => 'Website name',
+			'region' => 'Region'
+		]);
+
+		if ($validator->fails()) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Validation failed',
+				'data' => $validator->errors()
+			]);
+		}
+
+		if ($request->region == 'in') {
+			$api_key = env('CONNECT_RESELLER_INDIA');
+			$currency = '₹';
+		} else {
+			$api_key = env('CONNECT_RESELLER');
+			$currency = '$';
+		}
+
+		$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey='. $api_key .'&websiteName='. $request->website_name);
+
+		curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
+
+		$response = curl_exec($curl);
+
+		curl_close($curl);
+
+		$response = json_decode($response);
+
+		if ($response->responseMsg->statusCode !== 200) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Can\'t get the multi year pricing for this domain.',
+				'data' => []
+			]);
+		}
+
+		$prices = json_decode(json_encode($response), true);
+		// $prices = get_object_vars($response);
+
+		$price_array = [];
+
+		for ($i = 0; $i < 3; $i++) {
+			if ($i == '0') {
+				$unit_amount = str_replace('Registration Price for 1 year is ', '', $prices['responseData'][0][$i]['description']);
+				$duration = '1 Year';
+				$plan_id = '';
+			}
+
+			if ($i == '1') {
+				$unit_amount = str_replace('Registration Price for 2 year is ', '', $prices['responseData'][0][$i]['description']);
+				$duration = '2 Years';
+				$plan_id = '';
+			}
+
+			if ($i == '2') {
+				$unit_amount = str_replace('Registration Price for 3 year is ', '', $prices['responseData'][0][$i]['description']);
+				$duration = '3 Years';
+				$plan_id = '';
+			}
+			array_push($price_array, [
+				'description' => $prices['responseData'][0][$i]['description'],
+				'unit_amount' => $unit_amount,
+				'duration' => $duration
+			]);
+		}
+
+		return response()->json([
+			'status' => true,
+			'message' => 'Multi year pricing for '. $request->website_name,
+			'data' => [
+				'domain_name' => $request->website_name,
+				'currency' => $currency,
+				'prices' => $price_array,
+			]
 		]);
 	}
 }

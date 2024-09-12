@@ -44,6 +44,7 @@ Route::group(['prefix' => 'ihost'], function () {
 	Route::group(['prefix' => 'domain'], function () {
 		Route::post('search', [DomainController::class, 'search']);
 		Route::get('similar-domains', [DomainController::class, 'similar_domains']);
+		Route::get('multi-year-pricing', [DomainController::class, 'multi_year_price']);
 		
 		Route::get('get-json', [DomainController::class, 'get_domain']);
 		Route::post('add-json', [DomainController::class, 'add_json']);
