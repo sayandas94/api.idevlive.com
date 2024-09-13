@@ -44,4 +44,14 @@ abstract class Controller
 
         return $cc;
     }
+
+    protected function currency_symbol($region)
+    {
+        $symbol = match ($region) {
+            'in' => '₹',
+            'us' => '$',
+        };
+
+        return $symbol;
+    }
 }
