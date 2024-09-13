@@ -22,98 +22,6 @@ class DomainController extends Controller
 		}
 	}
 
-	// public function get_domain()
-	// {
-	// 	$domains_json = File::get(storage_path('json/domains.json'));
-	// 	// $domains = json_decode($domains_json);
-
-	// 	return response($domains_json);
-	// }
-
-	// public function add_json(Request $request)
-	// {
-	// 	// return response()->json($request->name);
-
-	// 	$domain_details = Product::where('name', $request->name . ' Domain Registration')->where('locale', 'us')->first();
-	// 	// $domain_details = 'hi';
-
-	// 	if ($domain_details) {
-	// 		return response()->json([
-	// 			'status' => true,
-	// 			'message' => 'Domain already added',
-	// 			'data' => $domain_details
-	// 		]);
-	// 	}
-
-	// 	// return response()->json([
-	// 	// 	'status' => false,
-	// 	// 	'data' => []
-	// 	// ]);
-
-	// 	$stripe = new \Stripe\StripeClient(env("STRIPE"));
-
-	// 	$add_product = $stripe->products->create(['name' => $request->name . ' Domain Registration']);
-
-	// 	$add_price = $stripe->prices->create([
-	// 		'currency' => 'usd',
-	// 		'unit_amount' => $request->stripe_price,
-	// 		'product' => $add_product->id
-	// 	]);
-
-	// 	$inputData = [
-	// 		'stripe' => $add_price->id,
-	// 		'name' => $request->name . ' Domain Registration',
-	// 		'category' => 'Domain',
-	// 		'duration' => '12 Months',
-	// 		'locale' => 'us',
-	// 		'currency_symbol' => '$',
-	// 		'currency_letter' => 'USD',
-	// 		'before_discount' => $request->before_discount,
-	// 		'after_discount' => $request->after_discount
-	// 	];
-
-	// 	$add_data = Product::insert($inputData);
-
-	// 	if ($add_data) {
-	// 		return response()->json([
-	// 			'status' => true
-	// 		]);
-	// 	}
-	// }
-
-	// public function add()
-	// {
-	// 	$domains_json = File::get(storage_path('json/domains.json'));
-	// 	$domains = json_decode($domains_json);
-
-	// 	$stripe = new \Stripe\StripeClient(env("STRIPE"));
-
-	// 	foreach ($domains as $domain) {
-	// 		$add_product = $stripe->products->create(['name' => $domain->name . ' Domain Registration']);
-
-	// 		$add_price = $stripe->prices->create([
-	// 			'currency' => 'usd',
-	// 			'unit_amount' => $domain->stripe_price,
-	// 			'product' => $add_product->id
-	// 		]);
-
-	// 		$inputData = [
-	// 			'stripe' => $add_price->id,
-	// 			'name' => $domain->name . ' Domain Registration',
-	// 			'category' => 'Domain',
-	// 			'duration' => '12 Months',
-	// 			'locale' => 'us',
-	// 			'currency_symbol' => '$',
-	// 			'currency_letter' => 'USD',
-	// 			'before_discount' => $domain->before_discount,
-	// 			'after_discount' => $domain->after_discount
-	// 		];
-
-	// 		$add_data = Product::insert($inputData);
-	// 		// echo $domain->name . ' Domain Registration<br>';
-	// 	}
-	// }
-
 	public function search(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
@@ -169,24 +77,6 @@ class DomainController extends Controller
 			]);
 		}
 
-		// return response()->json($product_detail);
-		// return;
-
-		// $product_detail = Product::where('name', $request->extension . ' Domain Registration')
-		// ->where('duration', '12 Months')
-		// ->where('locale', $request->locale)
-		// ->first();
-
-		// if (!$product_detail) {
-		// 	return response()->json([
-		// 		'status' => false,
-		// 		'message' => 'This domain can not be registered with us.',
-		// 		'data' => [
-		// 			'statusCode' => 404
-		// 		]
-		// 	]);
-		// }
-
 		if ($request->locale == 'in') {
 			$api_key = env('CONNECT_RESELLER_INDIA');
 		} else {
@@ -207,7 +97,7 @@ class DomainController extends Controller
 			return response()->json([
 				'status' => false,
 				'message' => $response->responseText,
-				'data' => $response
+				'data' => ['error' => ['unauthenticated' => ['Error Code - 401! Please contact the support team']]]
 			]);
 		}
 
@@ -248,54 +138,6 @@ class DomainController extends Controller
 			'message' => 'Domain is available for registration.',
 			'data' => $domain_data
 		]);
-
-		// if ($response->responseMsg->statusCode == 200) {
-		// 	$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey='. $api_key .'&websiteName='. $request->domain_name);
-
-		// 	curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
-
-		// 	$multi_year_pricing = curl_exec($curl);
-
-		// 	curl_close($curl);
-
-		// 	$multi_year_pricing = json_decode($multi_year_pricing);
-		// } else {
-		// 	$multi_year_pricing = false;
-		// }
-
-		// $curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/domainSuggestion?APIKey='. $api_key .'&keyword='. $request->domain_name .'&maxResult=5');
-
-		// curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
-
-		// $suggestions = curl_exec($curl);
-
-		// curl_close($curl);
-
-		// $suggestions = json_decode($suggestions);
-
-		// if ($response->responseMsg->statusCode == 400) {
-		// 	return response()->json([
-		// 		'status' => true,
-		// 		'message' => $response->responseMsg->message,
-		// 		'data' => [
-		// 			'statusCode' => 400,
-		// 			'suggestions' => $suggestions
-		// 		]
-		// 	]);
-		// }
-
-		// return response()->json([
-		// 	'status' => true,
-		// 	'message' => 'Domain available for registration',
-		// 	'data' => [
-		// 		'domain' => $request->domain_name,
-		// 		'registrationFee' => $response->responseData->registrationFee,
-		// 		'renewalFee' => $response->responseData->renewalfee,
-		// 		'suggestions' => $suggestions,
-		// 		'product_id' => $price_info->price_id,
-		// 		'multi_year_pricing' => $multi_year_pricing
-		// 	]
-		// ]);
 	}
 
 	public function similar_domains(Request $request)
@@ -439,34 +281,6 @@ class DomainController extends Controller
 			]);
 		}
 
-		// $details = Domain::where('user_id', auth()->user()->id)->where('domain_name', $request->domain_name)->first();
-		
-		// if ($details->status == 'Setup') {
-		// 	$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/ViewDomain?APIKey='. $this->connect_reseller() .'&websiteName='. $request->domain_name);
-
-		// 	curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
-
-		// 	$domain_details = curl_exec($curl);
-
-		// 	curl_close($curl);
-
-		// 	$domain_details = json_decode($domain_details);
-
-		// 	if ($domain_details->responseMsg->statusCode !== 200) {
-		// 		return false;
-		// 	}
-
-		// 	$update_website_id = Domain::where('domain_name', $request->domain_name)->update(['website_id' => $domain_details->responseData->websiteId]);
-
-		// 	// ACTIVATE DNS MANAGEMENT
-		// 	if (!$this->activate_domain($domain_details->responseData->websiteId)) {
-		// 		return response()->json([
-		// 			'status' => false,
-		// 			'message' => 'Can not activate the domain.',
-		// 			'data' => []
-		// 		]);
-		// 	}
-		// }
 		$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/ViewDomain?APIKey='. $this->connect_reseller() .'&websiteName='. $request->domain_name);
 
 		curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
