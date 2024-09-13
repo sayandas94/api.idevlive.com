@@ -222,7 +222,7 @@ class DomainController extends Controller
 
 		if ($response->responseMsg->statusCode != 200) { // the domain is not available for registration
 			return response()->json([
-				'status' => false,
+				'status' => true,
 				'message' => $response->responseMsg->message,
 				'data' => [
 					'status_code' => $response->responseMsg->statusCode,
@@ -239,7 +239,8 @@ class DomainController extends Controller
 			'price_id' => $price_info->price_id,
 			'currency' => $domain_price_info->currency,
 			'unit_amount' => $domain_price_info->unit_amount,
-			'discount_info' => $discount_info
+			'discount_info' => $discount_info,
+			'status_code' => 200
 		];
 
 		return response()->json([
@@ -939,7 +940,17 @@ class DomainController extends Controller
 		}
 
 		$prices = json_decode(json_encode($response), true);
-		// $prices = get_object_vars($response);
+
+		# break the domain into different parts
+		$domainParts = explode('.', $request->website_name);
+
+		# remove the domain name and keep the extension from the array
+		$extension_array = array_slice($domainParts, 1);
+
+		# join the extensions to form the tld
+		$extension = '.' . implode('.', $extension_array);
+
+		$product_id = Product::where('product_name', $extension)->first()->product_id;
 
 		$price_array = [];
 
@@ -947,24 +958,29 @@ class DomainController extends Controller
 			if ($i == '0') {
 				$unit_amount = str_replace('Registration Price for 1 year is ', '', $prices['responseData'][0][$i]['description']);
 				$duration = '1 Year';
-				$plan_id = '';
+				$price_id = Price::where('product_id', $product_id)->where('duration', 12)->first()->price_id;
+				$renewal_date = date('M j, Y', strtotime('1 year'));
 			}
 
 			if ($i == '1') {
 				$unit_amount = str_replace('Registration Price for 2 year is ', '', $prices['responseData'][0][$i]['description']);
 				$duration = '2 Years';
-				$plan_id = '';
+				$price_id = null;
+				$renewal_date = date('M j, Y', strtotime('2 years'));
 			}
 
 			if ($i == '2') {
 				$unit_amount = str_replace('Registration Price for 3 year is ', '', $prices['responseData'][0][$i]['description']);
 				$duration = '3 Years';
-				$plan_id = '';
+				$price_id = null;
+				$renewal_date = date('M j, Y', strtotime('3 years'));
 			}
 			array_push($price_array, [
 				'description' => $prices['responseData'][0][$i]['description'],
 				'unit_amount' => $unit_amount,
-				'duration' => $duration
+				'duration' => $duration,
+				'renewal_date' => $renewal_date,
+				'price_id' => $price_id
 			]);
 		}
 
