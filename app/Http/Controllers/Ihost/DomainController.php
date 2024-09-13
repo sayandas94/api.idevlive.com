@@ -994,4 +994,78 @@ class DomainController extends Controller
 			]
 		]);
 	}
+
+	public function popular_domain_prices(Request $request)
+	{
+		$popular_extensions = [
+			[
+				'tld' => '.info',
+				'product_id' => 'prod_QnOkVIBPsoreSM'
+			],
+			[
+				'tld' => '.agency',
+				'product_id' => 'prod_QnOY2Q4YXUwpSf'
+			],
+			[
+				'tld' => '.online',
+				'product_id' => 'prod_QnOoEiHAJSpf6X'
+			],
+			[
+				'tld' => '.cloud',
+				'product_id' => 'prod_QnOcEVO2Njj8pw'
+			],
+			[
+				'tld' => '.shop',
+				'product_id' => 'prod_QnOXUFk6TUaNfL'
+			],
+			[
+				'tld' => '.io',
+				'product_id' => 'prod_QnOlJ7TdRqGeP0'
+			],
+			[
+				'tld' => '.icu',
+				'product_id' => 'prod_QnOkKrI8A2R7Dp'
+			],
+			[
+				'tld' => '.ai',
+				'product_id' => 'prod_QnOYYPw4MTLwjj'
+			],
+		];
+
+		$prices = [];
+		$stripe = new \Stripe\StripeClient(env("STRIPE"));
+
+		foreach ($popular_extensions as $extension) {
+			$domain_info = Price::where('product_id', $extension['product_id'])
+			->where('region', $request->region)
+			->where('duration', 12)
+			->first();
+
+			$price_info = $stripe->prices->retrieve($domain_info->price_id, []);
+
+			if ($domain_info->discount_id == null) { // this tld doesn't have any discount
+				array_push($prices, [
+					'tld' => $extension['tld'],
+					'registration_fee' => ($price_info->unit_amount) / 100,
+					'renewal_fee' => ($price_info->unit_amount) / 100,
+					'currency' => $this->currency_symbol($request->region)
+				]);
+			} else { // this tld has a discount
+				$discount_info = $stripe->coupons->retrieve($domain_info->discount_id, []);
+
+				if ($discount_info->percent_off == null) { // this discount is in amount
+					array_push($prices, [
+						'tld' => $extension['tld'],
+						'registration_fee' => ($price_info->unit_amount - $discount_info->amount_off) / 100,
+						'renewal_fee' => ($price_info->unit_amount) / 100,
+						'currency' => $this->currency_symbol($request->region)
+					]);
+				} else { // this discount is in percent
+					// will do the calculations later
+				}
+			}
+		}
+
+		return response()->json($prices);
+	}
 }

@@ -43,6 +43,7 @@ Route::group(['prefix' => 'ihost'], function () {
 
 	Route::group(['prefix' => 'domain'], function () {
 		Route::post('search', [DomainController::class, 'search']);
+		Route::get('popular-domain-prices', [DomainController::class, 'popular_domain_prices']);
 		Route::get('similar-domains', [DomainController::class, 'similar_domains']);
 		Route::get('multi-year-pricing', [DomainController::class, 'multi_year_price']);
 		
