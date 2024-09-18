@@ -54,4 +54,15 @@ abstract class Controller
 
         return $symbol;
     }
+
+    # stripe currency from region
+    protected function currency_from_region($region)
+    {
+        $currency = match ($region) {
+            'in' => 'inr',
+            'us' => 'usd'
+        };
+
+        return $currency;
+    }
 }
