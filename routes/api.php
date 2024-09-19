@@ -35,6 +35,7 @@ Route::group(['prefix' => 'ihost'], function () {
 		Route::get('show', [HostingController::class, 'show']);
 		Route::post('choose-plan', [HostingController::class, 'choose_plan']);
 		Route::get('get-price-info', [HostingController::class, 'get_price_info']);
+		Route::get('multi-year-pricing', [HostingController::class, 'multi_year_pricing']);
 
 		Route::group(['middleware' => ['auth:sanctum']], function () {
 			Route::post('setup', [HostingController::class, 'setup']);
@@ -46,6 +47,8 @@ Route::group(['prefix' => 'ihost'], function () {
 		Route::get('popular-domain-prices', [DomainController::class, 'popular_domain_prices']);
 		Route::get('similar-domains', [DomainController::class, 'similar_domains']);
 		Route::get('multi-year-pricing', [DomainController::class, 'multi_year_price']);
+		Route::get('create-multi-year-pricing', [DomainController::class, 'create_multi_year_price']);
+		Route::get('mutli-year-price-info', [DomainController::class, 'mutli_year_price_info']);
 		
 		Route::get('get-json', [DomainController::class, 'get_domain']);
 		Route::post('add-json', [DomainController::class, 'add_json']);
