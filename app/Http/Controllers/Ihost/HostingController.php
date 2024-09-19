@@ -139,6 +139,33 @@ class HostingController extends Controller
 		return response()->json($price);
 	}
 
+	public function multi_year_pricing(Request $request)
+	{
+		$validation = Validator::make($request->all(), [
+			'product_id' => ['required', 'string'],
+			'region' => ['required', 'string']
+		], [], [
+			'product_id' => 'Product ID',
+			'region' => 'Region'
+		]);
+
+		if ($validation->fails()) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Validation failed.',
+				'data' => $validation->errors()
+			], 422);
+		}
+
+		$prices = Price::where('product_id', $request->product_id)-> where('region', $request->region)->get();
+
+		return response()->json([
+			'status' => true,
+			'message' => 'Multi year pricing.',
+			'data' => $prices
+		]);
+	}
+
 	public function setup(Request $request)
 	{
 		$validator = Validator::make($request->all(), [
