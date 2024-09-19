@@ -123,7 +123,9 @@ class AccountsController extends Controller
 			return response()->json([
 				'status' => false,
 				'message' => 'Invalid email address.',
-				'data' => []
+				'data' => [
+					'email' => ['There is no account with this email address.']
+				]
 			]);
 		}
 
@@ -131,7 +133,9 @@ class AccountsController extends Controller
 			return response()->json([
 				'status' => false,
 				'message' => 'Invalid password.',
-				'data' => [],
+				'data' => [
+					'password' => ['Incorrect password. Please try again or try <a href="reset-password" class="red-text medium" style="text-decoration: underline">resetting your password.</a>']
+				]
 			]);
 		}
 
