@@ -62,7 +62,7 @@ class DomainController extends Controller
 		}
 
 		# get the price id of the domain extension
-		$price_info = Price::where('product_id', $product_detail->product_id)->where('region', $request->locale)->first();
+		$price_info = Price::where('product_id', $product_detail->product_id)->where('region', $request->locale)->where('duration', '12')->first();
 
 		if (!$price_info) {
 			return response()->json([
@@ -107,7 +107,14 @@ class DomainController extends Controller
 		if ($price_info->discount_id) {
 			$discount_info = $stripe->coupons->retrieve($price_info->discount_id, []);
 		} else {
-			$discount_info = false;
+			$discount_info = null;
+		}
+
+		if ($response->responseMsg->statusCode == 404) { // domain name not valid
+			return response()->json([
+				'status' => false,
+				'message' => 'Domain name not valid.',
+			]);
 		}
 
 		if ($response->responseMsg->statusCode != 200) { // the domain is not available for registration
@@ -123,13 +130,26 @@ class DomainController extends Controller
 			]);
 		}
 
+		$ci_duration = match($price_info->duration) {
+			12 => 1,
+			24 => 2,
+			36 => 3,
+			60 => 5,
+			'default' => 1
+		};
+
 		$domain_data = [
 			'name' => $request->domain_name,
 			'extension' => $request->extension,
+			'product_id' => $price_info->product_id,
 			'price_id' => $price_info->price_id,
 			'currency' => $domain_price_info->currency,
 			'unit_amount' => $domain_price_info->unit_amount,
 			'discount_info' => $discount_info,
+			'duration' => $price_info->duration,
+			'duration_text' => $price_info->duration_text,
+			'ci_duration' => $ci_duration,
+			'renewal' => date('M j, Y', strtotime($price_info->duration_text)),
 			'status_code' => 200
 		];
 
@@ -709,33 +729,215 @@ class DomainController extends Controller
 		]);
 	}
 
+	// public function multi_year_price(Request $request)
+	// {
+	// 	$validator = Validator::make($request->all(), [
+	// 		'website_name' => ['required', 'string'],
+	// 		'region' => ['required', 'string']
+	// 	], [], [
+	// 		'website_name' => 'Website name',
+	// 		'region' => 'Region'
+	// 	]);
+
+	// 	if ($validator->fails()) {
+	// 		return response()->json([
+	// 			'status' => false,
+	// 			'message' => 'Validation failed',
+	// 			'data' => $validator->errors()
+	// 		]);
+	// 	}
+
+	// 	if ($request->region == 'in') {
+	// 		$api_key = env('CONNECT_RESELLER_INDIA');
+	// 		$currency = '₹';
+	// 	} else {
+	// 		$api_key = env('CONNECT_RESELLER');
+	// 		$currency = '$';
+	// 	}
+
+	// 	$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey='. $api_key .'&websiteName='. $request->website_name);
+
+	// 	curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
+
+	// 	$response = curl_exec($curl);
+
+	// 	curl_close($curl);
+
+	// 	$response = json_decode($response);
+
+	// 	if ($response->responseMsg->statusCode !== 200) {
+	// 		return response()->json([
+	// 			'status' => false,
+	// 			'message' => 'Can\'t get the multi year pricing for this domain.',
+	// 			'data' => []
+	// 		]);
+	// 	}
+
+	// 	$prices = json_decode(json_encode($response), true);
+
+	// 	# break the domain into different parts
+	// 	$domainParts = explode('.', $request->website_name);
+
+	// 	# remove the domain name and keep the extension from the array
+	// 	$extension_array = array_slice($domainParts, 1);
+
+	// 	# join the extensions to form the tld
+	// 	$extension = '.' . implode('.', $extension_array);
+
+	// 	$product_id = Product::where('product_name', $extension)->first()->product_id;
+
+	// 	$price_array = [];
+
+	// 	for ($i = 0; $i < 3; $i++) {
+	// 		if ($i == '0') {
+	// 			$unit_amount = str_replace('Registration Price for 1 year is ', '', $prices['responseData'][0][$i]['description']);
+	// 			$duration = '1 Year';
+	// 			$price_id = Price::where('product_id', $product_id)->where('duration', 12)->first()->price_id;
+	// 			$renewal_date = date('M j, Y', strtotime('1 year'));
+	// 		}
+
+	// 		if ($i == '1') {
+	// 			$unit_amount = str_replace('Registration Price for 2 year is ', '', $prices['responseData'][0][$i]['description']);
+	// 			$duration = '2 Years';
+	// 			$price_id = null;
+	// 			$renewal_date = date('M j, Y', strtotime('2 years'));
+	// 		}
+
+	// 		if ($i == '2') {
+	// 			$unit_amount = str_replace('Registration Price for 3 year is ', '', $prices['responseData'][0][$i]['description']);
+	// 			$duration = '3 Years';
+	// 			$price_id = null;
+	// 			$renewal_date = date('M j, Y', strtotime('3 years'));
+	// 		}
+	// 		array_push($price_array, [
+	// 			'description' => $prices['responseData'][0][$i]['description'],
+	// 			'unit_amount' => $unit_amount,
+	// 			'duration' => $duration,
+	// 			'renewal_date' => $renewal_date,
+	// 			'price_id' => $price_id
+	// 		]);
+	// 	}
+
+	// 	return response()->json([
+	// 		'status' => true,
+	// 		'message' => 'Multi year pricing for '. $request->website_name,
+	// 		'data' => [
+	// 			'domain_name' => $request->website_name,
+	// 			'currency' => $currency,
+	// 			'prices' => $price_array,
+	// 		]
+	// 	]);
+	// }
+
 	public function multi_year_price(Request $request)
 	{
-		$validator = Validator::make($request->all(), [
-			'website_name' => ['required', 'string'],
-			'region' => ['required', 'string']
-		], [], [
-			'website_name' => 'Website name',
-			'region' => 'Region'
-		]);
+		$duration = [12, 24, 36, 60];
 
-		if ($validator->fails()) {
+		foreach ($duration as $value) {
+
+			$duration_text = match($value) {
+				12 => '1 Year',
+				24 => '2 Years',
+				36 => '3 Years',
+				60 => '5 Years'
+			};
+
+			$price_info = Price::where('product_id', $request->product_id)->where('region', $request->region)->where('duration', $value)->first();
+
+			if (empty($price_info)) {
+				$pricing[$duration_text] = null;
+			}
+
+			$pricing[$duration_text] = $price_info;
+		}
+
+		return response()->json($pricing);
+	}
+
+	public function create_multi_year_price(Request $request)
+	{
+		$price_info = $this->fetch_multi_year_pricing($request->all());
+
+		if (!$price_info) {
 			return response()->json([
 				'status' => false,
-				'message' => 'Validation failed',
-				'data' => $validator->errors()
+				'message' => 'Can\'t get the price for '. $request->duration_text .'. Try again later.'
 			]);
 		}
 
-		if ($request->region == 'in') {
-			$api_key = env('CONNECT_RESELLER_INDIA');
-			$currency = '₹';
-		} else {
-			$api_key = env('CONNECT_RESELLER');
-			$currency = '$';
+		$duration_text = match($request->duration_text) {
+			'1 Year' => '1 year',
+			'2 Years' => '2 year',
+			'3 Years' => '3 year',
+			'5 Years' => '5 year'
+		};
+
+		$duration = match($request->duration_text) {
+			'1 Year' => 1,
+			'2 Years' => 2,
+			'3 Years' => 3,
+			'5 Years' => 5
+		};
+
+		$db_duration = match($request->duration_text) {
+			'1 Year' => 12,
+			'2 Years' => 24,
+			'3 Years' => 36,
+			'5 Years' => 60
+		};
+
+		# get the unit amount for 1 year price
+		$stripe = new \Stripe\StripeClient(env("STRIPE"));
+		$one_year_price_info = $stripe->prices->retrieve(Price::where('product_id', $request->product_id)->where('region', $request->region)->where('duration_text', '1 Year')->first()->price_id, []);
+
+		foreach ($price_info as $value) {				
+			if (strpos($value['description'], $duration_text) > 0) {
+				$stripe_data = [
+					'product_id' => $request->product_id,
+					'currency' => $this->currency_from_region($request->region),
+					'nickname' => $duration_text .' plan - '. $this->currency_from_region($request->region),
+					'unit_amount' => $one_year_price_info->unit_amount * $duration,
+					'region' => $request->region,
+					'selling_price' => str_replace('Registration Price for '. $duration_text .' is ', '', $value['description']) * 100,
+					'duration_text' => $request->duration_text,
+					'duration' => $db_duration
+				];
+			}
 		}
 
-		$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey='. $api_key .'&websiteName='. $request->website_name);
+		if ($stripe_data['unit_amount'] != $stripe_data['selling_price']) {
+			$stripe_data['coupon_name'] = Product::where('product_id', $request->product_id)->first()->product_name . ' - ' . $duration_text;
+		}
+
+		# Create new domain price in Stripe & Database
+		$price_info = $this->create_domain_price($stripe_data);
+		
+		if ($price_info) {
+			return response()->json([
+				'status' => true,
+				'message' => 'New price created',
+				'data' => ['price_id' => $price_info]
+			]);
+		}
+	}
+
+	protected function fetch_multi_year_pricing($input)
+	{
+		/**
+		 * 1. Get the pricing for the mentioned year from connect reseller
+		 * 2. Edit the pricing
+		 * 3. Create a new price on Stripe
+		 * 4. Update the data into the database
+		 * 5. Return the price
+		*/
+
+		if ($input['region'] == 'in') {
+			$api_key = env('CONNECT_RESELLER_INDIA');
+		} else {
+			$api_key = env('CONNECT_RESELLER');
+		}
+
+		$curl = curl_init('https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey='. $api_key .'&websiteName='. $input['domain']);
 
 		curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER => true]);
 
@@ -743,69 +945,111 @@ class DomainController extends Controller
 
 		curl_close($curl);
 
-		$response = json_decode($response);
+		$response = json_decode($response, true);
 
-		if ($response->responseMsg->statusCode !== 200) {
+		if ($response['responseMsg']['statusCode'] !== 200) {
+			return false;
+		}
+
+		return $response['responseData']['0'];
+	}
+
+	protected function create_domain_price($data)
+	{
+		$stripe = new \Stripe\StripeClient(env("STRIPE"));
+
+		$stripe_price = $stripe->prices->create([
+			'currency' => $data['currency'],
+			'unit_amount' => $data['unit_amount'],
+			'product' => $data['product_id'],
+			'nickname' => $data['nickname']
+		]);
+
+		$price_id = $stripe_price->id;
+
+		if ($data['unit_amount'] != $data['selling_price']) {
+			# code for creating a new coupon
+			$coupon = $stripe->coupons->create([
+				'amount_off' => $data['unit_amount'] - $data['selling_price'],
+				'currency' => $data['currency'],
+				'duration' => 'once',
+				'name' => $data['coupon_name']
+			]);
+
+			$discount_type = 'amount';
+			$discount_id = $coupon->id;
+		} else {
+			$discount_type = null;
+			$discount_id = null;
+		}
+
+		$add_price_db = Price::insert([
+			'product_id' => $data['product_id'],
+			'price_id' => $price_id,
+			'region' => $data['region'],
+			'duration_text' => $data['duration_text'],
+			'duration' => $data['duration'],
+			'discount_type' => $discount_type,
+			'discount_id' => $discount_id
+		]);
+		
+		return $price_id;
+	}
+
+	public function mutli_year_price_info(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'price_id' => ['required', 'string']
+		]);
+
+		if ($validator->fails()) {
 			return response()->json([
 				'status' => false,
-				'message' => 'Can\'t get the multi year pricing for this domain.',
-				'data' => []
+				'message' => 'Price ID missing.'
 			]);
 		}
 
-		$prices = json_decode(json_encode($response), true);
+		$price_info = Price::where('price_id', $request->price_id)->first();
 
-		# break the domain into different parts
-		$domainParts = explode('.', $request->website_name);
-
-		# remove the domain name and keep the extension from the array
-		$extension_array = array_slice($domainParts, 1);
-
-		# join the extensions to form the tld
-		$extension = '.' . implode('.', $extension_array);
-
-		$product_id = Product::where('product_name', $extension)->first()->product_id;
-
-		$price_array = [];
-
-		for ($i = 0; $i < 3; $i++) {
-			if ($i == '0') {
-				$unit_amount = str_replace('Registration Price for 1 year is ', '', $prices['responseData'][0][$i]['description']);
-				$duration = '1 Year';
-				$price_id = Price::where('product_id', $product_id)->where('duration', 12)->first()->price_id;
-				$renewal_date = date('M j, Y', strtotime('1 year'));
-			}
-
-			if ($i == '1') {
-				$unit_amount = str_replace('Registration Price for 2 year is ', '', $prices['responseData'][0][$i]['description']);
-				$duration = '2 Years';
-				$price_id = null;
-				$renewal_date = date('M j, Y', strtotime('2 years'));
-			}
-
-			if ($i == '2') {
-				$unit_amount = str_replace('Registration Price for 3 year is ', '', $prices['responseData'][0][$i]['description']);
-				$duration = '3 Years';
-				$price_id = null;
-				$renewal_date = date('M j, Y', strtotime('3 years'));
-			}
-			array_push($price_array, [
-				'description' => $prices['responseData'][0][$i]['description'],
-				'unit_amount' => $unit_amount,
-				'duration' => $duration,
-				'renewal_date' => $renewal_date,
-				'price_id' => $price_id
+		if (empty($price_info)) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Cannot find the pricing of this domain.'
 			]);
 		}
+
+		$stripe = new \Stripe\StripeClient(env("STRIPE"));
+		$stripe_price_info = $stripe->prices->retrieve($price_info->price_id, []);
+
+		if ($price_info->discount_id) {
+			$discount_info = $stripe->coupons->retrieve($price_info->discount_id, []);
+		} else {
+			$discount_info = null;
+		}
+
+		$ci_duration = match($price_info->duration) {
+			12 => 1,
+			24 => 2,
+			36 => 3,
+			60 => 5,
+			'default' => 1
+		};
+
+		$domain_data = [
+			'product_id' => $price_info->product_id,
+			'price_id' => $price_info->price_id,
+			'currency' => $stripe_price_info->currency,
+			'unit_amount' => $stripe_price_info->unit_amount,
+			'discount_info' => $discount_info,
+			'duration' => $price_info->duration,
+			'duration_text' => $price_info->duration_text,
+			'ci_duration' => $ci_duration,
+			'renewal' => date('M j, Y', strtotime($price_info->duration_text))
+		];
 
 		return response()->json([
 			'status' => true,
-			'message' => 'Multi year pricing for '. $request->website_name,
-			'data' => [
-				'domain_name' => $request->website_name,
-				'currency' => $currency,
-				'prices' => $price_array,
-			]
+			'data' => $domain_data
 		]);
 	}
 
