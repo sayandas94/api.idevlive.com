@@ -14,6 +14,8 @@ use App\Http\Controllers\Ihost\HostingController;
 // })->middleware('auth:sanctum');
 
 Route::group(['prefix' => 'accounts'], function () {
+	Route::get('get-taxes', [AccountsController::class, 'get_taxes']);
+
 	Route::post('register', [AccountsController::class, 'register']);
 	Route::post('login', [AccountsController::class, 'login']);
 });
@@ -28,16 +30,18 @@ Route::group(['prefix' => 'ihost'], function () {
 		Route::group(['middleware' => ['auth:sanctum']], function () {
 			Route::post('create-invoice', [CheckoutController::class, 'create_invoice']);
 			Route::post('deliver-products', [CheckoutController::class, 'deliver_products']);
+			Route::post('renew-hosting', [CheckoutController::class, 'renew_hosting']);
 		});
 	});
 
 	Route::group(['prefix' => 'hosting'], function () {
 		Route::get('show', [HostingController::class, 'show']);
-		Route::post('choose-plan', [HostingController::class, 'choose_plan']);
+		Route::get('choose-plan', [HostingController::class, 'choose_plan']);
 		Route::get('get-price-info', [HostingController::class, 'get_price_info']);
 		Route::get('multi-year-pricing', [HostingController::class, 'multi_year_pricing']);
 
 		Route::group(['middleware' => ['auth:sanctum']], function () {
+			Route::get('details', [HostingController::class, 'details']);
 			Route::post('setup', [HostingController::class, 'setup']);
 		});
 	});
@@ -80,6 +84,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 		Route::get('fetch-address', [AccountsController::class, 'fetch_address']);
 		Route::get('list-cards', [AccountsController::class, 'list_cards']);
 		Route::get('invoices', [AccountsController::class, 'invoices']);
+		Route::get('payment-methods', [AccountsController::class, 'payment_methods']);
 		
 		Route::post('update-address', [AccountsController::class, 'update_address']);
 		Route::post('update-password', [AccountsController::class, 'update_password']);

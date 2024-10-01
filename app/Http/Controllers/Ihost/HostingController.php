@@ -53,8 +53,9 @@ class HostingController extends Controller
 			['region', $request->region]
 		])->get();
 
+		$stripe = new \Stripe\StripeClient(env("STRIPE"));
+
 		foreach ($product_prices as &$price_info) {
-			$stripe = new \Stripe\StripeClient(env("STRIPE"));
 			
 			// $price = $stripe->prices->retrieve($plan->price_id, []);
 			// $plan->unit_amount = $price->unit_amount;
@@ -361,6 +362,45 @@ class HostingController extends Controller
 			'status' => 'Active',
 			'primary_domain' => $postData['domain-name'],
 			'server_ip' => $postData['ip-address']
+		]);
+	}
+
+	/** Function for getting User Hosting Details on the basis of ID */
+	public function details(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'id' => ['required', 'integer']
+		], [], [
+			'id' => 'Hosting ID'
+		]);
+
+		if ($validator->fails()) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Validation failed.',
+				'data' => $validator->errors()
+			]);
+		}
+
+		$details = Hosting::where('id', $request->id)->first();
+
+		if (!$details) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Details missing for this Hosting.'
+			]);
+		}
+
+		if (strtotime($details->expiring_at) <= strtotime('today')) {
+			$details['expired'] = true;
+		} else {
+			$details['expired'] = false;
+		}
+
+		return response()->json([
+			'status' => true,
+			'message' => 'Hosting details.',
+			'data' => $details
 		]);
 	}
 }

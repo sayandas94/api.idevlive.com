@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('purchase_date');
             $table->date('renewal_date');
             $table->decimal('price', total: 8, places: 2);
-            $table->string('status');
+            $table->boolean('status')->default(TRUE);
             $table->string('primary_domain')->nullable();
             $table->string('server_ip')->nullable();
             $table->string('auto_renew');

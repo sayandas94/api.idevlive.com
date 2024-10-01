@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 
 use App\Models\Ihost\Hosting;
 use App\Models\Ihost\Domain;
+use App\Models\Price;
 
 class CheckoutController extends Controller
 {
@@ -229,4 +230,133 @@ class CheckoutController extends Controller
             ]
         ]);
     }
+
+    public function renew_hosting(Request $request)
+    {
+        
+        $validator = Validator::make($request->all(), [
+            'id' => ['required', 'integer'],
+            'price' => ['required', 'string'],
+            'payment_method' => ['required', 'string']
+        ], [], [
+            'id' => 'Hosting ID',
+            'price' => 'Price ID',
+            'payment_method' => 'Payment Method'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed.',
+                'data' => $validator->errors()
+            ]);
+        }
+
+        // $invoiceData = [
+        //     'customer' => auth()->user()->stripe,
+        //     'price' => $request->price,
+        //     'quantity' => 1
+        // ];
+
+        // if ($request->taxId != null) {
+        //     $invoiceData['tax_rates'] = [$request->taxId];
+        // }
+
+        $invoiceData = [
+            'customer' => auth()->user()->stripe,
+            'default_payment_method' => $request->payment_method,
+            'invoice_item' => [
+                'customer' => auth()->user()->stripe,
+                'price' => $request->price,
+                'quantity' => 1
+            ]
+        ];
+
+        if ($request->taxId != null) {
+            $invoiceData['invoice_item']['tax_rates'] = [$request->taxId];
+        }
+
+        $invoice = $this->generate_invoice($invoiceData);
+
+        // $invoice = $this->generate_invoice(auth()->user()->stripe);
+
+        // $invoiceData = [
+        //     'id' => $invoice->id,
+        //     'invoiceItem' => $request->price,
+        //     'taxId' => $request->taxId,
+        // ];
+
+        // $addInvoiceItems = $this->add_invoice_items
+
+        if ($invoice == false) {
+            return response()->json('Can\'t create invoice');
+        }
+
+        // return response()->json($invoice->id);
+
+        // $invoicePayment = $this->invoice_payment($invoice->id);
+
+        // if ($invoicePayment == false) {
+        //     return response()->json('Can\'t pay the invoice');
+        // }
+        // return response()->json($invoicePayment);
+
+        $duration = Price::where('price_id', $request->price)->first()->duration_text;
+
+        Hosting::where('id', $request->id)->update([
+            'expiring_at' => date('Y-m-d G:i:s', strtotime($duration)),
+            'price_id' => $request->price
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Renewal done.',
+            'data' => $invoice
+        ]);
+    }
+
+    protected function generate_invoice($invoiceData)
+    {
+        $stripe = new \Stripe\StripeClient(env('STRIPE'));
+
+        try {
+            $invoice = $stripe->invoices->create([
+                'customer' => $invoiceData['customer'],
+                'auto_advance' => true,
+                'description' => 'Renewal for Web Hosting & Domain Registration',
+                'default_payment_method' => $invoiceData['default_payment_method']
+            ]);
+        } catch (\Throwable $th) {
+            return false;
+        }
+
+        $invoiceData['invoice_item']['invoice'] = $invoice->id;
+        # create invoice item
+        try {
+            $stripe->invoiceItems->create($invoiceData['invoice_item']);
+        } catch (\Throwable $th) {
+            return false;
+        }
+
+        # finalize the invoice
+        try {
+            $stripe->invoices->finalizeInvoice($invoice->id, []);
+        } catch (\Throwable $th) {
+            return $th;
+        }
+
+        try {
+            $stripe->invoices->pay($invoice->id, []);
+        } catch (\Throwable $th) {
+            return $th;
+        }
+
+        return $invoice;
+    }
+
+    // protected function invoice_payment($id)
+    // {
+        
+    //     return true;
+    // }
 }

@@ -235,6 +235,9 @@ class AccountsController extends Controller
 		foreach ($products as &$value) {
 			$value['created_at'] = date('M d, Y', strtotime($value['created_at']));
 			$value['expiring_at'] = date('M d, Y', strtotime($value['expiring_at']));
+			$value['str_created'] = strtotime($value['created_at']);
+			$value['str_expiring'] = strtotime($value['expiring_at']);
+			$value['str_today'] = strtotime('today');
 		}
 
 		return response()->json([
@@ -487,6 +490,43 @@ class AccountsController extends Controller
 			'status' => true,
 			'message' => 'Auto renew updated.',
 			'data' => []
+		]);
+	}
+
+	public function payment_methods()
+	{
+		$stripe = new \Stripe\StripeClient(env('STRIPE'));
+
+		$payment_methods = $stripe->customers->allPaymentMethods(auth()->user()->stripe);
+
+		return response()->json($payment_methods);
+	}
+
+	public function get_taxes(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'country' => ['required', 'string']
+		], [], [
+			'country' => 'Billing Country'
+		]);
+
+		if ($validator->fails()) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Query parameters missing.',
+				'data' => $validator->errors()
+			]);
+		}
+
+		$tax = match ($request->country) {
+			'United States' => ['rate' => 0, 'currency' => '$'],
+			'India' => ['rate' => 0.18, 'currency' => '₹', 'tax_id' => 'txr_1MOTY0L5iC8E88xqkEOpoSWd'],
+			'default' => ['rate' => 0, 'currency' => '$']
+		};
+
+		return response()->json([
+			'status' => true,
+			'data' => $tax
 		]);
 	}
 }
