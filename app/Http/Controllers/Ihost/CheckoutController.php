@@ -143,7 +143,7 @@ class CheckoutController extends Controller
                     'price' => number_format($item->unit_amount / 100, 2, '.', ''),
                     'created_at' => date('Y-m-d G:i:s', strtotime('now')),
                     'expiring_at' => date('Y-m-d G:i:s', strtotime('+ ' . $item->duration_text)),
-                    'status' => 'Setup',
+                    'status' => TRUE,
                     'auto_renew' => ($item->auto_renew == 'on') ? 1 : 0
                 ];
 
@@ -167,7 +167,7 @@ class CheckoutController extends Controller
                     'created_at' => date('Y-m-d G:i:s', strtotime('now')),
                     'expiring_at' => date('Y-m-d G:i:s', strtotime('+ ' . $item->duration_text)),
                     'price' => number_format($item->unit_amount / 100, 2, '.', ''),
-                    'status' => 'Setup',
+                    'status' => TRUE,
                     'auto_renew' => ($item->auto_renew == 'on') ? 1 : 0,
                     'connect_reseller_id' => auth()->user()->connect_reseller,
                     'domain_name' => $item->domain_name,

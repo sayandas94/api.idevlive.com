@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('domain_name');
             $table->date('created_at');
             $table->date('expiring_at');
-            $table->string('status');
+            $table->boolean('status')->default(TRUE);
             $table->boolean('auto_renew');
             $table->bigInteger('website_id');
             $table->bigInteger('dns_zone_id');
