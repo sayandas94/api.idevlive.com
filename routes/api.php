@@ -39,6 +39,7 @@ Route::group(['prefix' => 'ihost'], function () {
 		Route::get('choose-plan', [HostingController::class, 'choose_plan']);
 		Route::get('get-price-info', [HostingController::class, 'get_price_info']);
 		Route::get('multi-year-pricing', [HostingController::class, 'multi_year_pricing']);
+		Route::get('product-info', [HostingController::class, 'product_info']);
 
 		Route::group(['middleware' => ['auth:sanctum']], function () {
 			Route::get('details', [HostingController::class, 'details']);

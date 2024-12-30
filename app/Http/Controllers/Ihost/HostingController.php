@@ -403,4 +403,31 @@ class HostingController extends Controller
 			'data' => $details
 		]);
 	}
+
+	public function product_info(Request $request)
+	{
+		$validator = Validator::make($request->all(), [
+			'price_id' => ['required', 'string']
+		], [], [
+			'price_id' => 'Price ID'
+		]);
+
+		if ($validator->fails()) {
+			return response()->json([
+				'status' => false,
+				'message' => 'Price Id missing.',
+				'data' => $validator->errors()
+			]);
+		}
+
+		$product_id = Price::where('price_id', $request->price_id)->first()->product_id;
+
+		$features = Features::where('product_id', $product_id)->first();
+
+		return response()->json([
+			'status' => true,
+			'message' => 'Product ID',
+			'data' => $features
+		]);
+	}
 }
